@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <string name="app_name">RSControl</string>
+    <string name="title_activity_device_control">DeviceControlActivity</string>
+    <string name="hello_world">Hello world!</string>
+    <string name="action_settings">Settings</string>
+
+    <string name="intro_message">
+        <![CDATA[
+
+
+            This sample demonstrates how to use the Bluetooth LE Generic Attribute Profile (GATT)
+            to transmit arbitrary data between devices.
+
+
+        ]]>
+    </string>
+</resources>
