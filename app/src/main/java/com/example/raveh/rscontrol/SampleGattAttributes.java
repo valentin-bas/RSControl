@@ -23,7 +23,7 @@ public class SampleGattAttributes {
         attributes.put("00002a29-0000-1000-8000-00805f9b34fb", "Manufacturer Name String");
 
         attributes.put("9a66fb0f-0800-9191-11e4-012d1540cb8e", "Battery level");
-        attributes.put("9a66fb0e-0800-9191-11e4-012d1540cb8e", "Information");
+        attributes.put("9a66fa0b-0800-9191-11e4-012d1540cb8e", "Information");
     }
 
     public static String lookup(String uuid, String defaultName) {

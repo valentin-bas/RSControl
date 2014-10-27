@@ -6,6 +6,7 @@ package com.example.raveh.rscontrol;
 
 import android.app.Activity;
 import android.bluetooth.BluetoothGattCharacteristic;
+import android.bluetooth.BluetoothGattDescriptor;
 import android.bluetooth.BluetoothGattService;
 import android.content.BroadcastReceiver;
 import android.content.ComponentName;
@@ -26,6 +27,7 @@ import android.widget.TextView;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+import java.util.UUID;
 
 /**
  * For a given BLE device, this Activity provides the user interface to connect, display data,
@@ -97,6 +99,8 @@ public class DeviceControlActivity extends Activity {
                 displayGattServices(mBluetoothLeService.getSupportedGattServices());
             } else if (BluetoothLeService.ACTION_DATA_AVAILABLE.equals(action)) {
                 displayData(intent.getStringExtra(BluetoothLeService.EXTRA_DATA));
+            } else if ("TEST".equals(action)) {
+
             }
         }
     };
@@ -114,7 +118,7 @@ public class DeviceControlActivity extends Activity {
                         final BluetoothGattCharacteristic characteristic =
                                 mGattCharacteristics.get(groupPosition).get(childPosition);
                         final int charaProp = characteristic.getProperties();
-                        if ((charaProp | BluetoothGattCharacteristic.PROPERTY_READ) > 0) {
+                        /*if ((charaProp | BluetoothGattCharacteristic.PROPERTY_READ) > 0) {
                             // If there is an active notification on a characteristic, clear
                             // it first so it doesn't update the data field on the user interface.
                             if (mNotifyCharacteristic != null) {
@@ -123,11 +127,28 @@ public class DeviceControlActivity extends Activity {
                                 mNotifyCharacteristic = null;
                             }
                             mBluetoothLeService.readCharacteristic(characteristic);
-                        }
+                        }*/
                         if ((charaProp | BluetoothGattCharacteristic.PROPERTY_NOTIFY) > 0) {
                             mNotifyCharacteristic = characteristic;
                             mBluetoothLeService.setCharacteristicNotification(
                                     characteristic, true);
+                            List<BluetoothGattDescriptor> descList = characteristic.getDescriptors();
+                            BluetoothGattDescriptor desc = descList.get(0);
+                            byte[] valueDesc = {(byte)0x01,(byte)0x00};
+                            desc.setValue(valueDesc);
+                            //mBluetoothLeService.mBluetoothGatt.writeDescriptor(desc);
+                            mBluetoothLeService.sendDescriptor(desc);
+                            final BluetoothGattCharacteristic infoChar =
+                                    mGattCharacteristics.get(2).get(11);
+                            UUID infoId = infoChar.getUuid();
+                            byte[] value = {(byte)0x04,(byte)0x01,(byte)0x00, (byte)0x04,
+                                    (byte)0x01,(byte)0x00,(byte)0x32, (byte)0x30,
+                                    (byte)0x31,(byte)0x34,(byte)0x2D, (byte)0x31,
+                                    (byte)0x30,(byte)0x2D,(byte)0x32, (byte)0x37, (byte)0x00};
+                            infoChar.setValue(value);
+
+                            //boolean status = mBluetoothLeService.mBluetoothGatt.writeCharacteristic(infoChar);
+                            mBluetoothLeService.sendCharacteristic(infoChar);
                         }
                         return true;
                     }

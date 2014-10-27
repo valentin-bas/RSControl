@@ -28,12 +28,15 @@ import java.util.UUID;
  * given Bluetooth LE device.
  */
 public class BluetoothLeService extends Service {
+    public BluetoothGatt mBluetoothGatt;
+
+    private BleSender   mSender;
+
     private final static String TAG = BluetoothLeService.class.getSimpleName();
 
     private BluetoothManager mBluetoothManager;
     private BluetoothAdapter mBluetoothAdapter;
     private String mBluetoothDeviceAddress;
-    private BluetoothGatt mBluetoothGatt;
     private int mConnectionState = STATE_DISCONNECTED;
 
     private static final int STATE_DISCONNECTED = 0;
@@ -78,6 +81,18 @@ public class BluetoothLeService extends Service {
         }
 
         @Override
+        public void onCharacteristicWrite(BluetoothGatt gatt, BluetoothGattCharacteristic characteristic, int status)
+        {
+            mSender.releaseCommand();
+        }
+
+        @Override
+        public void onDescriptorWrite(BluetoothGatt gatt, BluetoothGattDescriptor characteristic, int status)
+        {
+            mSender.releaseDescriptor();
+        }
+
+        @Override
         public void onServicesDiscovered(BluetoothGatt gatt, int status) {
             if (status == BluetoothGatt.GATT_SUCCESS) {
                 broadcastUpdate(ACTION_GATT_SERVICES_DISCOVERED);
@@ -101,6 +116,22 @@ public class BluetoothLeService extends Service {
             broadcastUpdate(ACTION_DATA_AVAILABLE, characteristic);
         }
     };
+
+    public void sendCharacteristic(BluetoothGattCharacteristic command)
+    {
+        BleSender.Command   bleCommand = new BleSender.Command();
+        bleCommand.characteristic = command;
+        bleCommand.bluetoothGatt = mBluetoothGatt;
+        mSender.addCommand(bleCommand);
+    }
+
+    public void sendDescriptor(BluetoothGattDescriptor descriptor)
+    {
+        BleSender.Descriptor   bleDesc = new BleSender.Descriptor();
+        bleDesc.descriptor = descriptor;
+        bleDesc.bluetoothGatt = mBluetoothGatt;
+        mSender.addDescriptor(bleDesc);
+    }
 
     private void broadcastUpdate(final String action) {
         final Intent intent = new Intent(action);
@@ -198,6 +229,9 @@ public class BluetoothLeService extends Service {
      *         callback.
      */
     public boolean connect(final String address) {
+
+        mSender = new BleSender();
+
         if (mBluetoothAdapter == null || address == null) {
             Log.w(TAG, "BluetoothAdapter not initialized or unspecified address.");
             return false;
