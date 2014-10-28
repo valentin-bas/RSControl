@@ -50,6 +50,7 @@ public class DeviceControlActivity extends Activity {
     private ArrayList<ArrayList<BluetoothGattCharacteristic>> mGattCharacteristics =
             new ArrayList<ArrayList<BluetoothGattCharacteristic>>();
     private boolean mConnected = false;
+    private RsProtocol mProtocol;
     private BluetoothGattCharacteristic mNotifyCharacteristic;
 
     private final String LIST_NAME = "NAME";
@@ -99,8 +100,8 @@ public class DeviceControlActivity extends Activity {
                 displayGattServices(mBluetoothLeService.getSupportedGattServices());
             } else if (BluetoothLeService.ACTION_DATA_AVAILABLE.equals(action)) {
                 displayData(intent.getStringExtra(BluetoothLeService.EXTRA_DATA));
-            } else if ("TEST".equals(action)) {
-
+            } else if (BluetoothLeService.RECEIVE_INFORMATION.equals(action)) {
+                mProtocol.sendConfig(mBluetoothLeService, mGattCharacteristics);
             }
         }
     };
@@ -129,26 +130,7 @@ public class DeviceControlActivity extends Activity {
                             mBluetoothLeService.readCharacteristic(characteristic);
                         }*/
                         if ((charaProp | BluetoothGattCharacteristic.PROPERTY_NOTIFY) > 0) {
-                            mNotifyCharacteristic = characteristic;
-                            mBluetoothLeService.setCharacteristicNotification(
-                                    characteristic, true);
-                            List<BluetoothGattDescriptor> descList = characteristic.getDescriptors();
-                            BluetoothGattDescriptor desc = descList.get(0);
-                            byte[] valueDesc = {(byte)0x01,(byte)0x00};
-                            desc.setValue(valueDesc);
-                            //mBluetoothLeService.mBluetoothGatt.writeDescriptor(desc);
-                            mBluetoothLeService.sendDescriptor(desc);
-                            final BluetoothGattCharacteristic infoChar =
-                                    mGattCharacteristics.get(2).get(11);
-                            UUID infoId = infoChar.getUuid();
-                            byte[] value = {(byte)0x04,(byte)0x01,(byte)0x00, (byte)0x04,
-                                    (byte)0x01,(byte)0x00,(byte)0x32, (byte)0x30,
-                                    (byte)0x31,(byte)0x34,(byte)0x2D, (byte)0x31,
-                                    (byte)0x30,(byte)0x2D,(byte)0x32, (byte)0x37, (byte)0x00};
-                            infoChar.setValue(value);
-
-                            //boolean status = mBluetoothLeService.mBluetoothGatt.writeCharacteristic(infoChar);
-                            mBluetoothLeService.sendCharacteristic(infoChar);
+                            mProtocol.connect(mBluetoothLeService, mGattCharacteristics);
                         }
                         return true;
                     }
@@ -181,6 +163,8 @@ public class DeviceControlActivity extends Activity {
         getActionBar().setDisplayHomeAsUpEnabled(true);
         Intent gattServiceIntent = new Intent(this, BluetoothLeService.class);
         bindService(gattServiceIntent, mServiceConnection, BIND_AUTO_CREATE);
+
+        mProtocol = new RsProtocol();
     }
 
     @Override
@@ -313,6 +297,7 @@ public class DeviceControlActivity extends Activity {
         intentFilter.addAction(BluetoothLeService.ACTION_GATT_DISCONNECTED);
         intentFilter.addAction(BluetoothLeService.ACTION_GATT_SERVICES_DISCOVERED);
         intentFilter.addAction(BluetoothLeService.ACTION_DATA_AVAILABLE);
+        intentFilter.addAction(BluetoothLeService.RECEIVE_INFORMATION);
         return intentFilter;
     }
 }

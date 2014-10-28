@@ -28,7 +28,8 @@ import java.util.UUID;
  * given Bluetooth LE device.
  */
 public class BluetoothLeService extends Service {
-    public BluetoothGatt mBluetoothGatt;
+
+    private BluetoothGatt mBluetoothGatt;
 
     private BleSender   mSender;
 
@@ -44,15 +45,17 @@ public class BluetoothLeService extends Service {
     private static final int STATE_CONNECTED = 2;
 
     public final static String ACTION_GATT_CONNECTED =
-            "com.example.bluetooth.le.ACTION_GATT_CONNECTED";
+            "com.example.raveh.ACTION_GATT_CONNECTED";
     public final static String ACTION_GATT_DISCONNECTED =
-            "com.example.bluetooth.le.ACTION_GATT_DISCONNECTED";
+            "com.example.raveh..ACTION_GATT_DISCONNECTED";
     public final static String ACTION_GATT_SERVICES_DISCOVERED =
-            "com.example.bluetooth.le.ACTION_GATT_SERVICES_DISCOVERED";
+            "com.example.raveh.ACTION_GATT_SERVICES_DISCOVERED";
     public final static String ACTION_DATA_AVAILABLE =
-            "com.example.bluetooth.le.ACTION_DATA_AVAILABLE";
+            "com.example.raveh.ACTION_DATA_AVAILABLE";
+    public final static String RECEIVE_INFORMATION =
+            "com.example.raveh.RECEIVE_INFORMATION";
     public final static String EXTRA_DATA =
-            "com.example.bluetooth.le.EXTRA_DATA";
+            "com.example.raveh.EXTRA_DATA";
 
     public final static UUID UUID_HEART_RATE_MEASUREMENT =
             UUID.fromString(SampleGattAttributes.HEART_RATE_MEASUREMENT);
@@ -125,10 +128,10 @@ public class BluetoothLeService extends Service {
         mSender.addCommand(bleCommand);
     }
 
-    public void sendDescriptor(BluetoothGattDescriptor descriptor)
+    public void sendDescriptor(BluetoothGattCharacteristic charac)
     {
         BleSender.Descriptor   bleDesc = new BleSender.Descriptor();
-        bleDesc.descriptor = descriptor;
+        bleDesc.characteristic = charac;
         bleDesc.bluetoothGatt = mBluetoothGatt;
         mSender.addDescriptor(bleDesc);
     }
@@ -158,7 +161,19 @@ public class BluetoothLeService extends Service {
             final int heartRate = characteristic.getIntValue(format, 1);
             Log.d(TAG, String.format("Received heart rate: %d", heartRate));
             intent.putExtra(EXTRA_DATA, String.valueOf(heartRate));
-        } else {
+        }
+        else if (UUID.fromString("9a66fb0f-0800-9191-11e4-012d1540cb8e").equals(characteristic.getUuid()))
+        {
+            byte[] value = characteristic.getValue();
+            int batteryLevel = value[value.length - 1];
+            intent.putExtra(EXTRA_DATA, String.valueOf(batteryLevel));
+        }
+        else if (UUID.fromString("9a66fb0e-0800-9191-11e4-012d1540cb8e").equals(characteristic.getUuid()))
+        {
+            sendBroadcast(new Intent(RECEIVE_INFORMATION));
+            return;
+        }
+        /*else {
             // For all other profiles, writes the data formatted in HEX.
             final byte[] data = characteristic.getValue();
             if (data != null && data.length > 0) {
@@ -167,7 +182,7 @@ public class BluetoothLeService extends Service {
                     stringBuilder.append(String.format("%02X ", byteChar));
                 intent.putExtra(EXTRA_DATA, new String(data) + "\n" + stringBuilder.toString());
             }
-        }
+        }*/
         sendBroadcast(intent);
     }
 

@@ -23,11 +23,16 @@ public class BleSender
     }
 
     public static class Descriptor {
-        public BluetoothGattDescriptor descriptor;
+        public BluetoothGattCharacteristic characteristic;
         public BluetoothGatt bluetoothGatt;
         public void execute()
         {
-            bluetoothGatt.writeDescriptor(descriptor);
+            List<BluetoothGattDescriptor> descList = characteristic.getDescriptors();
+            BluetoothGattDescriptor desc = descList.get(0);
+            byte[] valueDesc = {(byte) 0x01, (byte) 0x00};
+            desc.setValue(valueDesc);
+            bluetoothGatt.setCharacteristicNotification(characteristic, true);
+            bluetoothGatt.writeDescriptor(desc);
         }
     }
 
@@ -80,15 +85,15 @@ public class BleSender
             synchronized (m_CmdList) {
                 if (!m_DescWaiting && !m_CmdWaiting && m_DescList.size() > 0)
                 {
-                    m_DescList.get(m_DescList.size() - 1).execute();
-                    m_DescList.remove(m_DescList.size() - 1);
+                    m_DescList.get(0).execute();
+                    m_DescList.remove(0);
                     m_DescWaiting = true;
                 }
 
                 if (!m_DescWaiting && !m_CmdWaiting && m_CmdList.size() > 0)
                 {
-                    m_CmdList.get(m_CmdList.size() - 1).execute();
-                    m_CmdList.remove(m_CmdList.size() - 1);
+                    m_CmdList.get(0).execute();
+                    m_CmdList.remove(0);
                     m_CmdWaiting = true;
                 }
             }
