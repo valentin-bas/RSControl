@@ -20,6 +20,7 @@ import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
+import android.widget.Button;
 import android.widget.ExpandableListView;
 import android.widget.SimpleExpandableListAdapter;
 import android.widget.TextView;
@@ -27,6 +28,8 @@ import android.widget.TextView;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Timer;
+import java.util.TimerTask;
 import java.util.UUID;
 
 /**
@@ -50,11 +53,42 @@ public class DeviceControlActivity extends Activity {
     private ArrayList<ArrayList<BluetoothGattCharacteristic>> mGattCharacteristics =
             new ArrayList<ArrayList<BluetoothGattCharacteristic>>();
     private boolean mConnected = false;
-    private RsProtocol mProtocol;
+
     private BluetoothGattCharacteristic mNotifyCharacteristic;
+
+    private Timer mTimer;
+    private PingTimerTask mTimerTask;
+    private RsProtocol mProtocol;
 
     private final String LIST_NAME = "NAME";
     private final String LIST_UUID = "UUID";
+
+    private class PingTimerTask extends TimerTask
+    {
+        PingTimerTask(RsProtocol protocol)
+        {
+            m_Protocol = protocol;
+        }
+
+        public void setCharacteristics(ArrayList<ArrayList<BluetoothGattCharacteristic>> characs)
+        {
+            m_Characteristics = characs;
+        }
+
+        public void setService(BluetoothLeService service)
+        {
+            m_Service = service;
+        }
+
+        @Override
+        public void run() {
+            m_Protocol.sendPing(m_Service, m_Characteristics);
+        }
+
+        private RsProtocol m_Protocol;
+        private BluetoothLeService m_Service;
+        private ArrayList<ArrayList<BluetoothGattCharacteristic>> m_Characteristics;
+    };
 
     // Code to manage Service lifecycle.
     private final ServiceConnection mServiceConnection = new ServiceConnection() {
@@ -110,7 +144,7 @@ public class DeviceControlActivity extends Activity {
     // demonstrates 'Read' and 'Notify' features.  See
     // http://d.android.com/reference/android/bluetooth/BluetoothGatt.html for the complete
     // list of supported characteristic features.
-    private final ExpandableListView.OnChildClickListener servicesListClickListner =
+    /*private final ExpandableListView.OnChildClickListener servicesListClickListner =
             new ExpandableListView.OnChildClickListener() {
                 @Override
                 public boolean onChildClick(ExpandableListView parent, View v, int groupPosition,
@@ -119,7 +153,7 @@ public class DeviceControlActivity extends Activity {
                         final BluetoothGattCharacteristic characteristic =
                                 mGattCharacteristics.get(groupPosition).get(childPosition);
                         final int charaProp = characteristic.getProperties();
-                        /*if ((charaProp | BluetoothGattCharacteristic.PROPERTY_READ) > 0) {
+                        if ((charaProp | BluetoothGattCharacteristic.PROPERTY_READ) > 0) {
                             // If there is an active notification on a characteristic, clear
                             // it first so it doesn't update the data field on the user interface.
                             if (mNotifyCharacteristic != null) {
@@ -128,13 +162,35 @@ public class DeviceControlActivity extends Activity {
                                 mNotifyCharacteristic = null;
                             }
                             mBluetoothLeService.readCharacteristic(characteristic);
-                        }*/
+                        }
                         if ((charaProp | BluetoothGattCharacteristic.PROPERTY_NOTIFY) > 0) {
                             mProtocol.connect(mBluetoothLeService, mGattCharacteristics);
                         }
                         return true;
                     }
                     return false;
+                }
+            };*/
+
+    private final Button.OnClickListener sendSettingsClickListner =
+            new Button.OnClickListener() {
+
+                @Override
+                public void onClick(View view) {
+                    mProtocol.connect(mBluetoothLeService, mGattCharacteristics);
+                    view.setEnabled(false);
+
+                    mTimerTask.setService(mBluetoothLeService);
+                    mTimer.schedule(mTimerTask, 0, 50);
+                }
+            };
+
+    private final Button.OnClickListener takeOffClickListner =
+            new Button.OnClickListener() {
+
+                @Override
+                public void onClick(View view) {
+                    mProtocol.takeOff(mBluetoothLeService, mGattCharacteristics);
                 }
             };
 
@@ -155,7 +211,10 @@ public class DeviceControlActivity extends Activity {
         // Sets up UI references.
         ((TextView) findViewById(R.id.device_address)).setText(mDeviceAddress);
         mGattServicesList = (ExpandableListView) findViewById(R.id.gatt_services_list);
-        mGattServicesList.setOnChildClickListener(servicesListClickListner);
+        //mGattServicesList.setOnChildClickListener(servicesListClickListner);
+        ((Button)findViewById(R.id.send_settings_button)).setOnClickListener(sendSettingsClickListner);
+        findViewById(R.id.send_settings_button).setEnabled(false);
+        ((Button)findViewById(R.id.take_off_button)).setOnClickListener(takeOffClickListner);
         mConnectionState = (TextView) findViewById(R.id.connection_state);
         mDataField = (TextView) findViewById(R.id.data_value);
 
@@ -165,6 +224,8 @@ public class DeviceControlActivity extends Activity {
         bindService(gattServiceIntent, mServiceConnection, BIND_AUTO_CREATE);
 
         mProtocol = new RsProtocol();
+        mTimer = new Timer();
+        mTimerTask = new PingTimerTask(mProtocol);
     }
 
     @Override
@@ -289,6 +350,8 @@ public class DeviceControlActivity extends Activity {
                 new int[] { android.R.id.text1, android.R.id.text2 }
         );
         mGattServicesList.setAdapter(gattServiceAdapter);
+        mTimerTask.setCharacteristics(mGattCharacteristics);
+        findViewById(R.id.send_settings_button).setEnabled(true);
     }
 
     private static IntentFilter makeGattUpdateIntentFilter() {

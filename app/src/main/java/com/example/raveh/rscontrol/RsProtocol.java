@@ -11,6 +11,7 @@ import java.util.UUID;
 public class RsProtocol {
 
     private int state = 0;
+    private byte pingValue = 0;
 
     public void connect(BluetoothLeService service, ArrayList<ArrayList<BluetoothGattCharacteristic>> characteristics)
     {
@@ -81,5 +82,32 @@ public class RsProtocol {
             service.sendCharacteristic(infoChar);
         }
         state++;
+    }
+
+    public void takeOff(BluetoothLeService service, ArrayList<ArrayList<BluetoothGattCharacteristic>> characteristics)
+    {
+        //charac send 9a66fa0b
+        //04:05:02:00:01:00
+        byte[] value = {(byte)0x04,(byte)0x05,(byte)0x02,(byte)0x00,
+                        (byte)0x01,(byte)0x00};
+        final BluetoothGattCharacteristic takeOffChar = characteristics.get(2).get(11);
+        takeOffChar.setValue(value);
+        service.sendCharacteristic(takeOffChar);
+    }
+
+    public void sendPing(BluetoothLeService service, ArrayList<ArrayList<BluetoothGattCharacteristic>> characteristics)
+    {
+        if (state >= 14) {
+            //charac send 9a66fa0a
+            //02:{00-FF}:02:00:02:00:00:00:00:00:00:00:00:00:00
+            byte[] value = {(byte) 0x02, pingValue, (byte) 0x02, (byte) 0x00,
+                    (byte) 0x02, (byte) 0x00, (byte) 0x00, (byte) 0x00,
+                    (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00,
+                    (byte) 0x00, (byte) 0x00, (byte) 0x00};
+            final BluetoothGattCharacteristic pingChar = characteristics.get(2).get(10);
+            pingChar.setValue(value);
+            service.sendCharacteristic(pingChar);
+            pingValue++;
+        }
     }
 }
